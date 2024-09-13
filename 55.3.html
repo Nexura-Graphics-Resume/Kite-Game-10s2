@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kite Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: skyblue;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        #game {
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #kite {
+            position: absolute;
+            width: 100px;
+            height: auto;
+            transition: transform 0.05s ease;
+        }
+
+        .cloud {
+            position: absolute;
+            width: 150px;
+            height: auto;
+        }
+
+        #hearts {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        .heart {
+            width: 40px;
+            height: auto;
+            display: inline-block;
+        }
+
+        #meter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: yellow;
+            padding: 10px;
+            font-size: 20px;
+        }
+
+        #refresh {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: red;
+            padding: 20px;
+            font-size: 20px;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+            border-radius: 10px;
+        }
+
+        /* Congratulatory Message Style */
+        #congratulations {
+            display: none;
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px; /* Increased size */
+            color: navy;
+            font-weight: bold;
+            text-shadow: 5px 5px 8px black;
+            text-align: center;
+            z-index: 100;
+        }
+
+        #congratulations span {
+            display: block;
+            font-size: 30px; /* Smaller size for 10s2 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game">
+        <img id="kite" src="https://pngimg.com/uploads/kite/kite_PNG2.png" alt="Kite">
+
+        <!-- Clouds -->
+        <img class="cloud" id="cloud1" src="https://www.seekpng.com/png/full/1-14844_transparent-png-clouds-transparent-background-cartoon-clouds-png.png">
+        <img class="cloud" id="cloud2" src="https://www.seekpng.com/png/full/1-14844_transparent-png-clouds-transparent-background-cartoon-clouds-png.png">
+        <img class="cloud" id="cloud3" src="https://www.seekpng.com/png/full/1-14844_transparent-png-clouds-transparent-background-cartoon-clouds-png.png">
+
+        <!-- Hearts -->
+        <div id="hearts">
+            <img class="heart" id="heart1" src="http://icons.iconarchive.com/icons/google/noto-emoji-people-family-love/1024/12138-red-heart-icon.png">
+            <img class="heart" id="heart2" src="http://icons.iconarchive.com/icons/google/noto-emoji-people-family-love/1024/12138-red-heart-icon.png">
+            <img class="heart" id="heart3" src="http://icons.iconarchive.com/icons/google/noto-emoji-people-family-love/1024/12138-red-heart-icon.png">
+        </div>
+
+        <!-- Meter -->
+        <div id="meter">0 / 1000</div>
+
+        <!-- Refresh Button -->
+        <div id="refresh" onclick="window.location.reload()">Refresh</div>
+
+        <!-- Congratulatory Message -->
+        <div id="congratulations">CONGRATULATION YOU HAVE WON THE GAME <span>10s2</span></div>
+    </div>
+
+    <script>
+        let kite = document.getElementById('kite');
+        let clouds = [document.getElementById('cloud1'), document.getElementById('cloud2'), document.getElementById('cloud3')];
+        let hearts = [document.getElementById('heart1'), document.getElementById('heart2'), document.getElementById('heart3')];
+        let meter = document.getElementById('meter');
+        let refreshBtn = document.getElementById('refresh');
+        let congratulations = document.getElementById('congratulations');
+
+        let heartCount = 3;
+        let distance = 0;
+        let gameInterval;
+        let cloudIntervals = [];
+        let gameSpeed = 30; // Much faster cloud speed, decrease further if needed
+
+        // Kite dragging mechanics
+        document.addEventListener('mousemove', (e) => {
+            let kiteX = e.clientX - kite.offsetWidth / 2;
+            let kiteY = e.clientY - kite.offsetHeight / 2;
+            kite.style.left = kiteX + 'px';
+            kite.style.top = kiteY + 'px';
+        });
+
+        // Cloud movement with gradual speed increase
+        function moveClouds() {
+            clouds.forEach((cloud, index) => {
+                let cloudX = Math.random() * window.innerWidth;
+                let cloudY = -Math.random() * 100;
+                cloud.style.left = cloudX + 'px';
+                cloud.style.top = cloudY + 'px';
+
+                cloudIntervals[index] = setInterval(() => {
+                    cloudY += (10 + distance / 100); // Faster speed as distance increases
+                    cloud.style.top = cloudY + 'px';
+
+                    // Check for collision
+                    if (checkCollision(kite, cloud)) {
+                        heartCount--;
+                        hearts[heartCount].style.display = 'none';
+
+                        if (heartCount === 0) {
+                            gameOver();
+                        }
+
+                        // Move cloud out of the way
+                        cloudY = -Math.random() * 100;
+                        cloud.style.left = Math.random() * window.innerWidth + 'px';
+                    }
+
+                    // Reset cloud position if it moves off screen
+                    if (cloudY > window.innerHeight) {
+                        cloudY = -Math.random() * 100;
+                        cloud.style.left = Math.random() * window.innerWidth + 'px';
+                    }
+                }, gameSpeed); // Clouds move faster by reducing interval time
+            });
+        }
+
+        // Check collision
+        function checkCollision(kite, cloud) {
+            let kiteRect = kite.getBoundingClientRect();
+            let cloudRect = cloud.getBoundingClientRect();
+
+            return !(kiteRect.right < cloudRect.left || kiteRect.left > cloudRect.right || kiteRect.bottom < cloudRect.top || kiteRect.top > cloudRect.bottom);
+        }
+
+        // Update distance meter
+        function updateMeter() {
+            gameInterval = setInterval(() => {
+                distance += 20; // Increase distance faster
+                meter.innerHTML = distance + ' / 1000';
+
+                // Gradually increase speed as distance increases
+                if (distance % 100 === 0) {
+                    gameSpeed -= 5; // Increase speed by reducing interval time
+                }
+
+                // Check if player reaches 1000 meters
+                if (distance >= 1000) {
+                    clearInterval(gameInterval);
+                    clearCloudIntervals();
+                    showCongratulations(); // Show congratulations message
+                }
+            }, 300); // Faster distance updates
+        }
+
+        // Clear cloud intervals
+        function clearCloudIntervals() {
+            cloudIntervals.forEach((interval) => {
+                clearInterval(interval);
+            });
+        }
+
+        // Show congratulations message
+        function showCongratulations() {
+            congratulations.style.display = 'block';
+        }
+
+        // Game over
+        function gameOver() {
+            clearInterval(gameInterval);
+            clearCloudIntervals();
+            refreshBtn.style.display = 'block';
+        }
+
+        // Start game
+        moveClouds();
+        updateMeter();
+    </script>
+</body>
+</html>
